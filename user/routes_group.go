@@ -11,7 +11,12 @@ func AddRoutesGroup(r *gin.Engine) {
 	userRouter := r.Group("/user")
 
 	userRouter.GET("/", func(c *gin.Context) {
-		c.JSON(200, GetUsers(db.Connection))
+		users, err := GetUsers(db.Connection)
+		if err != nil {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		c.JSON(http.StatusOK, users)
 	})
 
 	userRouter.POST("/", func(c *gin.Context) {

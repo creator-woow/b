@@ -1,10 +1,12 @@
 package db
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"os"
 )
 
@@ -43,16 +45,16 @@ func NewConnection() *gorm.DB {
 
 // NewMockConnection creates new mock database. Returns pointer to mocked database and mock function for mimic
 // this database answers
-func NewMockConnection() (*gorm.DB, sqlmock.Sqlmock) {
-	dbMock, mock, err := sqlmock.New()
+func NewMockConnection() (*gorm.DB, sqlmock.Sqlmock, *sql.DB) {
+	conn, mock, err := sqlmock.New()
 	if err != nil {
 		panic("Failed to create mock database: " + err.Error())
 	}
-	dbConn, openErr := gorm.Open(postgres.New(postgres.Config{
-		Conn: dbMock,
-	}), &gorm.Config{})
+	dbConn, openErr := gorm.Open(
+		postgres.New(postgres.Config{Conn: conn}), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)},
+	)
 	if openErr != nil {
 		panic("Failed to create mock database: " + openErr.Error())
 	}
-	return dbConn, mock
+	return dbConn, mock, conn
 }

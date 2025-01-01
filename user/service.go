@@ -3,41 +3,53 @@ package user
 import (
 	"errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"happy-server/shared"
 )
 
 // GetUsers gets all users from database
-func GetUsers(db *gorm.DB) []User {
+func GetUsers(db *gorm.DB) ([]User, error) {
 	var users []User
-	db.Find(&users)
-	return users
+	if err := db.Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
 }
 
 // GetUser gets one user from database by primary key (id)
 func GetUser(db *gorm.DB, id shared.ID) (*User, error) {
 	var foundUser User
-	db.First(&foundUser, id)
-	if foundUser.ID == 0 {
-		return nil, errors.New("user not found")
+	if err := db.First(&foundUser, id).Error; err != nil {
+		return nil, err
 	}
 	return &foundUser, nil
 }
 
 // CreateUser creates new user record in database
 func CreateUser(db *gorm.DB, d createUserData) (*User, error) {
-	var foundUser User
-	db.First(&foundUser, "email = ?", d.Email)
-	if foundUser.ID != 0 {
+	if err := db.First(&User{}, "email = ?", d.Email); err == nil {
 		return nil, errors.New("user already exists")
 	}
-	newUser := &User{
+	newUser := User{
 		Email:     d.Email,
 		Password:  d.Password,
 		FirstName: d.FirstName,
 		LastName:  d.LastName,
 	}
-	db.Create(newUser)
-	return newUser, nil
+	db.Create(&newUser)
+	return &newUser, nil
+}
+
+// UpdateUser updates user record in database
+func UpdateUser(db *gorm.DB, id shared.ID, d updateUserData) (*User, error) {
+	targetUser, err := GetUser(db, id)
+	if err != nil {
+		return nil, err
+	}
+	if updateErr := db.Model(targetUser).Clauses(clause.Returning{}).Updates(d).Error; updateErr != nil {
+		return nil, updateErr
+	}
+	return targetUser, nil
 }
 
 // DeleteUser deletes user record from database
@@ -48,14 +60,4 @@ func DeleteUser(db *gorm.DB, id shared.ID) error {
 	}
 	db.Delete(&User{}, id)
 	return nil
-}
-
-// UpdateUser updates user record in database
-func UpdateUser(db *gorm.DB, id shared.ID, d updateUserData) (*User, error) {
-	foundUser, err := GetUser(db, id)
-	if err != nil {
-		return nil, err
-	}
-	db.Model(foundUser).Where("id = ?", id).Updates(d)
-	return foundUser, nil
 }
