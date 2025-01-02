@@ -8,21 +8,20 @@ import (
 	"happy-server/user"
 )
 
-func main() {
-	initEnv()
-
-	r := gin.Default()
+func init() {
+	loadEnv()
 	db.Connection = db.NewConnection()
-
 	runAutoMigrations()
-	extendMainRouter(r)
+}
 
+func main() {
+	r := gin.Default()
+	extendMainRouter(r)
 	r.Run()
 }
 
-func initEnv() {
-	err := godotenv.Load("../.env")
-	if err != nil {
+func loadEnv() {
+	if err := godotenv.Load(); err != nil {
 		panic("Error loading .env file")
 	}
 }
@@ -35,6 +34,6 @@ func runAutoMigrations() {
 }
 
 func extendMainRouter(r *gin.Engine) {
-	user.AddRoutesGroup(r)
-	auth.AddRoutesGroup(r)
+	user.InitRoutes(r)
+	auth.InitRoutes(r)
 }

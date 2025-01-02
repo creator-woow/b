@@ -1,4 +1,4 @@
-package shared
+package lib
 
 type RequestError struct {
 	ErrMsg string `json:"errMsg"`

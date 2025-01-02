@@ -7,36 +7,43 @@ import (
 )
 
 var (
-	mockCreate = createUserData{Email: "new.email@gmail.com", FirstName: "User"}
+	mockCreate = CreateUserData{Email: "new.email@gmail.com", FirstName: "User"}
 	mockUpdate = updateUserData{Email: "another@gmail.com", FirstName: "Another name"}
 )
 
 func TestCreateUser(t *testing.T) {
 	testDb, mock, conn := db.NewMockConnection()
 	defer conn.Close()
-	mock.ExpectQuery("SELECT").WithArgs(mockCreate.Email, 1).WillReturnRows(sqlmock.NewRows([]string{}))
-	mock.ExpectBegin()
-	mock.ExpectQuery("INSERT").WillReturnRows(
-		sqlmock.NewRows([]string{"id"}).AddRow(1),
-	)
-	mock.ExpectCommit()
-	mock.ExpectQuery("SELECT").WithArgs(mockCreate.Email, 1).WillReturnRows(
-		sqlmock.NewRows([]string{"id"}).AddRow(1),
-	)
-	createdUser, creationErr := CreateUser(testDb, mockCreate)
-	if creationErr != nil {
-		t.Error(creationErr)
-		return
-	}
-	if !(createdUser.Email == mockCreate.Email && createdUser.FirstName == mockCreate.FirstName) {
-		t.Error("created user record does not match with mock data")
-		return
-	}
-	_, newUserErr := CreateUser(testDb, mockCreate)
-	// Check if request fails on already existing user
-	if newUserErr != nil {
-		t.Error(newUserErr)
-	}
+
+	t.Run("create user succeed", func(t *testing.T) {
+		mock.ExpectQuery("SELECT").WithArgs(mockCreate.Email, 1).WillReturnRows(
+			sqlmock.NewRows([]string{}),
+		)
+		mock.ExpectBegin()
+		mock.ExpectQuery("INSERT").WillReturnRows(
+			sqlmock.NewRows([]string{"id"}).AddRow(1),
+		)
+		mock.ExpectCommit()
+		createdUser, creationErr := CreateUser(testDb, mockCreate)
+		if creationErr != nil {
+			t.Error(creationErr)
+			return
+		}
+		if !(createdUser.Email == mockCreate.Email && createdUser.FirstName == mockCreate.FirstName) {
+			t.Error("created user record does not match with mock data")
+		}
+	})
+
+	t.Run("create existed user fails", func(t *testing.T) {
+		mock.ExpectQuery("SELECT").WithArgs(mockCreate.Email, 1).WillReturnRows(
+			sqlmock.NewRows([]string{"id"}).AddRow(1),
+		)
+		_, existErr := CreateUser(testDb, mockCreate)
+		// Check if request fails on already existing user
+		if existErr == nil {
+			t.Error(existErr)
+		}
+	})
 }
 
 func TestGetUser(t *testing.T) {
@@ -47,7 +54,7 @@ func TestGetUser(t *testing.T) {
 			1, mockCreate.Email, mockCreate.FirstName,
 		),
 	)
-	foundUser, err := GetUser(testDb, 1)
+	foundUser, err := ReadUserById(testDb, 1)
 	if err != nil {
 		t.Error(err)
 		return
