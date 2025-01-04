@@ -7,35 +7,27 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"os"
+	"log"
 )
 
-// Connection is global variable that contains pointer to database connection
-var Connection *gorm.DB
-
-// NewConnection opens new connection to database
-func NewConnection() *gorm.DB {
+// New opens new connection to database and returns pointer to it's instance
+func New(username, password, host string, port int, name string) *gorm.DB {
 	dsn := fmt.Sprintf(
 		"postgresql://%v:%v@%v:%v/%v",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
+		username, password, host, port, name,
 	)
 	connection, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
 	if err != nil {
-		panic("Failed to connect database")
+		log.Panicln("Failed to connect database")
 	}
 
 	sqlDB, err := connection.DB()
 
 	if err != nil {
-		panic("Failed to get database instance")
+		log.Panicln("Failed to get database instance")
 	}
 
-	// Configure connection pooling
 	sqlDB.SetMaxOpenConns(100)  // Maximum number of open connections
 	sqlDB.SetMaxIdleConns(10)   // Maximum number of idle connections
 	sqlDB.SetConnMaxLifetime(0) // Maximum amount of time a connection
@@ -43,18 +35,18 @@ func NewConnection() *gorm.DB {
 	return connection
 }
 
-// NewMockConnection creates new mock database. Returns pointer to mocked database and mock function for mimic
+// NewMock creates new mock database for tests. Returns pointer to mocked database and mock function for mimic
 // this database answers
-func NewMockConnection() (*gorm.DB, sqlmock.Sqlmock, *sql.DB) {
+func NewMock() (*gorm.DB, sqlmock.Sqlmock, *sql.DB) {
 	conn, mock, err := sqlmock.New()
 	if err != nil {
-		panic("Failed to create mock database: " + err.Error())
+		log.Panicln("Failed to create mock database: " + err.Error())
 	}
 	dbConn, openErr := gorm.Open(
 		postgres.New(postgres.Config{Conn: conn}), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)},
 	)
 	if openErr != nil {
-		panic("Failed to create mock database: " + openErr.Error())
+		log.Panicln("Failed to create mock database: " + openErr.Error())
 	}
 	return dbConn, mock, conn
 }

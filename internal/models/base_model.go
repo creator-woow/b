@@ -1,6 +1,11 @@
-package lib
+package models
 
-import "time"
+import (
+	"time"
+)
+
+// ID declares type of id field for all models
+type ID uint64
 
 type BaseModel struct {
 	ID        ID        `json:"id" gorm:"primaryKey"`

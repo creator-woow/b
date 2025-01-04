@@ -1,19 +1,20 @@
-package user
+package services
 
 import (
 	"github.com/DATA-DOG/go-sqlmock"
-	"happy-server/db"
+	"happy-server/internal/db"
 	"testing"
 )
 
 var (
 	mockCreate = CreateUserData{Email: "new.email@gmail.com", FirstName: "User"}
-	mockUpdate = updateUserData{Email: "another@gmail.com", FirstName: "Another name"}
+	mockUpdate = UpdateUserData{Email: "another@gmail.com", FirstName: "Another name"}
 )
 
 func TestCreateUser(t *testing.T) {
-	testDb, mock, conn := db.NewMockConnection()
+	testDb, mock, conn := db.NewMock()
 	defer conn.Close()
+	s := UserService{DB: testDb}
 
 	t.Run("create user succeed", func(t *testing.T) {
 		mock.ExpectQuery("SELECT").WithArgs(mockCreate.Email, 1).WillReturnRows(
@@ -24,7 +25,7 @@ func TestCreateUser(t *testing.T) {
 			sqlmock.NewRows([]string{"id"}).AddRow(1),
 		)
 		mock.ExpectCommit()
-		createdUser, creationErr := CreateUser(testDb, mockCreate)
+		createdUser, creationErr := s.CreateUser(mockCreate)
 		if creationErr != nil {
 			t.Error(creationErr)
 			return
@@ -38,7 +39,7 @@ func TestCreateUser(t *testing.T) {
 		mock.ExpectQuery("SELECT").WithArgs(mockCreate.Email, 1).WillReturnRows(
 			sqlmock.NewRows([]string{"id"}).AddRow(1),
 		)
-		_, existErr := CreateUser(testDb, mockCreate)
+		_, existErr := s.CreateUser(mockCreate)
 		// Check if request fails on already existing user
 		if existErr == nil {
 			t.Error(existErr)
@@ -47,14 +48,15 @@ func TestCreateUser(t *testing.T) {
 }
 
 func TestGetUser(t *testing.T) {
-	testDb, mock, conn := db.NewMockConnection()
+	testDb, mock, conn := db.NewMock()
 	defer conn.Close()
+	s := UserService{DB: testDb}
 	mock.ExpectQuery("SELECT").WithArgs(1, 1).WillReturnRows(
 		sqlmock.NewRows([]string{"id", "email", "first_name"}).AddRow(
 			1, mockCreate.Email, mockCreate.FirstName,
 		),
 	)
-	foundUser, err := ReadUserById(testDb, 1)
+	foundUser, err := s.ReadUserById(1)
 	if err != nil {
 		t.Error(err)
 		return
@@ -65,8 +67,10 @@ func TestGetUser(t *testing.T) {
 }
 
 func TestUpdateUser(t *testing.T) {
-	testDb, mock, conn := db.NewMockConnection()
+	testDb, mock, conn := db.NewMock()
 	defer conn.Close()
+	s := UserService{DB: testDb}
+
 	mock.ExpectQuery("SELECT").WithArgs(1, 1).WillReturnRows(
 		sqlmock.NewRows([]string{"id", "email", "first_name"}).AddRow(
 			1, mockCreate.Email, mockCreate.FirstName,
@@ -81,7 +85,7 @@ func TestUpdateUser(t *testing.T) {
 		),
 	)
 	mock.ExpectCommit()
-	updatedUser, updateErr := UpdateUser(testDb, 1, mockUpdate)
+	updatedUser, updateErr := s.UpdateUser(1, mockUpdate)
 	if updateErr != nil {
 		t.Error(updateErr)
 		return
@@ -92,8 +96,9 @@ func TestUpdateUser(t *testing.T) {
 }
 
 func TestDeleteUser(t *testing.T) {
-	testDb, mock, conn := db.NewMockConnection()
+	testDb, mock, conn := db.NewMock()
 	defer conn.Close()
+	s := UserService{DB: testDb}
 	mock.ExpectQuery("SELECT").WithArgs(1, 1).WillReturnRows(
 		sqlmock.NewRows([]string{"id", "email", "first_name"}).AddRow(
 			1, mockCreate.Email, mockCreate.FirstName,
@@ -104,7 +109,7 @@ func TestDeleteUser(t *testing.T) {
 		sqlmock.NewResult(0, 1),
 	)
 	mock.ExpectCommit()
-	err := DeleteUser(testDb, 1)
+	err := s.DeleteUser(1)
 	if err != nil {
 		t.Error(err)
 	}

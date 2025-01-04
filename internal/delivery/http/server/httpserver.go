@@ -1,4 +1,4 @@
-package lib
+package httpserver
 
 type RequestError struct {
 	ErrMsg string `json:"errMsg"`
