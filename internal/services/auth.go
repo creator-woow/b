@@ -25,21 +25,21 @@ type AuthService struct {
 	TokenService *TokenService
 }
 
-func (as *AuthService) Register(d CreateUserData) (*models.User, error) {
+func (s *AuthService) Register(d CreateUserData) (*models.User, error) {
 	hashedPassword, hashingErr := pass.GenerateHash(d.Password)
 	if hashingErr != nil {
 		return nil, hashingErr
 	}
 	d.Password = hashedPassword
-	newUser, creationErr := as.UserService.CreateUser(d)
+	newUser, creationErr := s.UserService.CreateUser(d)
 	if creationErr != nil {
 		return nil, creationErr
 	}
 	return newUser, nil
 }
 
-func (as *AuthService) Login(d LoginData) (*TokensPair, error) {
-	foundUser, notFoundErr := as.UserService.ReadUserByEmail(d.Email)
+func (s *AuthService) Login(d LoginData) (*TokensPair, error) {
+	foundUser, notFoundErr := s.UserService.ReadUserByEmail(d.Email)
 	if notFoundErr != nil {
 		return nil, errors.New("wrong credentials")
 	}
@@ -47,7 +47,7 @@ func (as *AuthService) Login(d LoginData) (*TokensPair, error) {
 		return nil, errors.New("wrong credentials")
 	}
 	sub := fmt.Sprintf("%v", foundUser.ID)
-	accessToken := as.TokenService.CreateAccess(
+	accessToken := s.TokenService.CreateAccess(
 		accessTokenClaims{
 			FirstName: foundUser.FirstName,
 			LastName:  foundUser.LastName,
@@ -57,7 +57,7 @@ func (as *AuthService) Login(d LoginData) (*TokensPair, error) {
 			},
 		},
 	)
-	refreshToken := as.TokenService.CreateRefresh(
+	refreshToken := s.TokenService.CreateRefresh(
 		jwt.RegisteredClaims{Subject: sub},
 	)
 	tokens := &TokensPair{
